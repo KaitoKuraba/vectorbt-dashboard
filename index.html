@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>efin.finance Backtesting (Prototype)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       EFIN.FINANCE DESIGN SYSTEM — Kaito Backtesting Dashboard
+       Deep navy dark mode, clean white light mode
+       ═══════════════════════════════════════════════════════════════ */
+
+    [data-theme="dark"] {
+      --bg-body: #0c1221;
+      --bg-surface: #111827;
+      --bg-card: #151e30;
+      --bg-card-hover: #1a2540;
+      --bg-input: #0f1729;
+      --bg-header: #0e1525;
+      --border-main: #1e2d4a;
+      --border-light: #1a2642;
+      --border-focus: #2563eb;
+      --text-primary: #e8ecf4;
+      --text-secondary: #8b99b3;
+      --text-tertiary: #5e6e8a;
+      --text-muted: #3d4d68;
+      --accent: #2563eb;
+      --accent-hover: #3b82f6;
+      --accent-bg: rgba(37, 99, 235, 0.12);
+      --green: #00c48c;
+      --green-light: rgba(0, 196, 140, 0.12);
+      --red: #ff5757;
+      --red-light: rgba(255, 87, 87, 0.1);
+      --yellow: #ffb800;
+      --cyan: #00b8d9;
+      --chart-grid: #1a2642;
+      --chart-text: #5e6e8a;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    [data-theme="light"] {
+      --bg-body: #f5f7fb;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8f9fc;
+      --bg-input: #f5f7fb;
+      --bg-header: #ffffff;
+      --border-main: #e5e9f0;
+      --border-light: #eef1f6;
+      --border-focus: #2563eb;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-tertiary: #9ca3af;
+      --text-muted: #d1d5db;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-bg: rgba(37, 99, 235, 0.06);
+      --green: #00a76f;
+      --green-light: rgba(0, 167, 111, 0.08);
+      --red: #e53e3e;
+      --red-light: rgba(229, 62, 62, 0.06);
+      --yellow: #d69e00;
+      --cyan: #0891b2;
+      --chart-grid: #e5e9f0;
+      --chart-text: #6b7280;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-body);
+      color: var(--text-primary);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ─── Header — efin style nav bar ─── */
+    .header {
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border-main);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .logo-text {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+
+    .logo-text .accent { color: var(--accent); }
+
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-info {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      padding: 5px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-main);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .theme-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--border-main);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .theme-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
+
+    /* ─── Layout ─── */
+    .layout {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      min-height: calc(100vh - 56px);
+    }
+
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-main);
+      padding: 20px 16px;
+      overflow-y: auto;
+      max-height: calc(100vh - 56px);
+    }
+
+    .main {
+      padding: 20px 24px;
+      overflow-y: auto;
+      max-height: calc(100vh - 56px);
+    }
+
+    /* ─── Sections ─── */
+    .section { margin-bottom: 20px; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-tertiary);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    /* ─── Forms ─── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .form-group { margin-bottom: 8px; }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-main);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: 'Sarabun', sans-serif;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    .form-group input:focus, .form-group select:focus { border-color: var(--border-focus); }
+    .form-group select { cursor: pointer; }
+
+    /* ─── Buttons ─── */
+    .btn {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Sarabun', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-main);
+      margin-top: 6px;
+    }
+
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-optimize { background: var(--cyan); color: #fff; border: none; margin-top: 8px; }
+    .btn-optimize:hover { opacity: 0.85; }
+    .btn-optimize:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ─── Metric Cards ─── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 10px 12px;
+      transition: background 0.15s;
+    }
+
+    .metric-card:hover { background: var(--bg-card-hover); }
+
+    .metric-card .label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .metric-card .value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    .metric-card .sub { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+
+    /* ─── Chart Container ─── */
+    .chart-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+    }
+
+    .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary); }
+
+    /* ─── Tabs — efin underline style ─── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    .tab {
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-tertiary);
+      transition: all 0.15s;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+    .tab:hover:not(.active) { color: var(--text-secondary); }
+
+    /* ─── Tables ─── */
+    .trade-table, .opt-table { width: 100%; border-collapse: collapse; }
+
+    .trade-table th, .opt-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-main);
+    }
+
+    .trade-table td, .opt-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-light);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+      color: var(--text-primary);
+    }
+
+    .trade-table tr:hover td, .opt-table tr:hover td { background: var(--bg-card-hover); }
+    .opt-table tr:first-child td { background: var(--accent-bg); }
+
+    /* ─── Loader & Empty ─── */
+    .loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      color: var(--text-tertiary);
+      font-size: 14px;
+    }
+
+    .spinner {
+      width: 22px; height: 22px;
+      border: 2.5px solid var(--border-main);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 20px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      width: 72px; height: 72px;
+      border-radius: 20px;
+      background: var(--accent-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .empty-icon svg { color: var(--accent); }
+    .empty-state h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--text-primary); }
+    .empty-state p { font-size: 14px; color: var(--text-tertiary); max-width: 440px; line-height: 1.6; }
+
+    /* ─── Heatmap ─── */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: 50px repeat(12, 1fr);
+      gap: 2px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+    }
+
+    .heatmap-cell { padding: 6px 3px; text-align: center; border-radius: 4px; font-weight: 500; }
+    .heatmap-header { color: var(--text-tertiary); font-weight: 600; padding: 4px; text-align: center; font-size: 10px; text-transform: uppercase; }
+
+    /* ─── Condition Builder ─── */
+    .condition-card {
+      background: var(--bg-input);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 6px;
+      position: relative;
+    }
+
+    .condition-card .remove-btn {
+      position: absolute; top: 6px; right: 6px;
+      background: none; border: none;
+      color: var(--red); cursor: pointer;
+      font-size: 16px; opacity: 0.5;
+      padding: 2px 6px; border-radius: 4px;
+    }
+
+    .condition-card .remove-btn:hover { opacity: 1; background: var(--red-light); }
+
+    .condition-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 4px; }
+    .condition-card .form-group { margin-bottom: 4px; }
+    .condition-card .form-group label { font-size: 10px; }
+
+    .logic-toggle {
+      display: flex; gap: 0; margin-bottom: 8px;
+      border-radius: 6px; overflow: hidden;
+      border: 1px solid var(--border-main);
+    }
+
+    .logic-toggle button {
+      flex: 1; padding: 6px; font-size: 11px; font-weight: 600;
+      cursor: pointer; border: none;
+      background: var(--bg-input); color: var(--text-tertiary);
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    .logic-toggle button.active { background: var(--accent); color: #fff; }
+
+    .section-title-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .section-title-row span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
+    .section-title-row .entry-label { color: var(--green); }
+    .section-title-row .exit-label { color: var(--red); }
+
+    .add-condition-btn {
+      font-size: 11px; padding: 4px 10px;
+      border: 1px dashed var(--border-main);
+      border-radius: 4px; background: none;
+      color: var(--text-tertiary); cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    .add-condition-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .opt-param-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 6px; align-items: end; }
+    .opt-param-row .form-group { margin-bottom: 0; }
+
+    /* ─── Symbol Search ─── */
+    .symbol-search { position: relative; margin-bottom: 8px; }
+
+    .symbol-search input {
+      width: 100%; padding: 8px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-main);
+      border-radius: 6px; color: var(--text-primary);
+      font-size: 13px; font-family: 'Sarabun', sans-serif; outline: none;
+    }
+
+    .symbol-search input:focus { border-color: var(--border-focus); }
+
+    .symbol-dropdown {
+      position: absolute; top: 100%; left: 0; right: 0;
+      max-height: 240px; overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-main);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      z-index: 100;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .symbol-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; cursor: pointer; font-size: 13px;
+      transition: background 0.1s;
+    }
+
+    .symbol-item:hover { background: var(--bg-card-hover); }
+
+    .symbol-item .sym { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 12px; color: var(--text-primary); }
+    .symbol-item .name { color: var(--text-tertiary); font-size: 12px; margin-left: 10px; }
+
+    .symbol-item .tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; padding: 2px 6px;
+      border-radius: 3px; font-weight: 600; letter-spacing: 0.5px;
+    }
+
+    .tag-stock { background: var(--accent-bg); color: var(--accent); }
+    .tag-crypto { background: rgba(0, 184, 217, 0.1); color: var(--cyan); }
+
+    .error-banner {
+      padding: 12px; background: var(--red-light);
+      border: 1px solid var(--red); border-radius: 8px;
+      font-size: 13px; color: var(--red); margin-top: 12px; line-height: 1.5;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+    const API = window.location.origin + "/api";
+
+    const CDL_PATTERNS = [
+      { value: "cdl_doji",                label: "Doji",                  type: "neutral" },
+      { value: "cdl_hammer",              label: "Hammer",                type: "bullish" },
+      { value: "cdl_inverted_hammer",     label: "Inverted Hammer",       type: "bullish" },
+      { value: "cdl_shooting_star",       label: "Shooting Star",         type: "bearish" },
+      { value: "cdl_bullish_engulfing",   label: "Bullish Engulfing",     type: "bullish" },
+      { value: "cdl_bearish_engulfing",   label: "Bearish Engulfing",     type: "bearish" },
+      { value: "cdl_morning_star",        label: "Morning Star",          type: "bullish" },
+      { value: "cdl_evening_star",        label: "Evening Star",          type: "bearish" },
+      { value: "cdl_bullish_harami",      label: "Bullish Harami",        type: "bullish" },
+      { value: "cdl_bearish_harami",      label: "Bearish Harami",        type: "bearish" },
+      { value: "cdl_three_white_soldiers",label: "Three White Soldiers",  type: "bullish" },
+      { value: "cdl_three_black_crows",   label: "Three Black Crows",     type: "bearish" },
+      { value: "cdl_marubozu_bull",       label: "Bullish Marubozu",      type: "bullish" },
+      { value: "cdl_marubozu_bear",       label: "Bearish Marubozu",      type: "bearish" },
+      { value: "cdl_piercing_line",       label: "Piercing Line",         type: "bullish" },
+      { value: "cdl_dark_cloud_cover",    label: "Dark Cloud Cover",      type: "bearish" },
+    ];
+
+    const INDICATOR_OPTIONS = [
+      { value: "ma_crossover",  label: "MA Crossover",           hasDirection: true },
+      { value: "ma_trend",      label: "MA Trend (state)",       hasDirection: true },
+      { value: "rsi",           label: "RSI Threshold",          hasCompare: true, hasValue: true,
+        compares: [{ value: "below", label: "Crosses below" },{ value: "above", label: "Crosses above" },{ value: "is_below", label: "Is below" },{ value: "is_above", label: "Is above" }]},
+      { value: "bollinger",     label: "Bollinger Bands",        hasCompare: true,
+        compares: [{ value: "below_lower", label: "Crosses below lower" },{ value: "above_upper", label: "Crosses above upper" },{ value: "is_below_lower", label: "Is below lower" },{ value: "is_above_upper", label: "Is above upper" },{ value: "crosses_middle_up", label: "Crosses middle up" },{ value: "crosses_middle_down", label: "Crosses middle down" }]},
+      { value: "macd",          label: "MACD Crossover",         hasDirection: true },
+      { value: "macd_hist",     label: "MACD Histogram",         hasDirection: true },
+      { value: "price_ma",      label: "Price vs MA",            hasCompare: true,
+        compares: [{ value: "above_fast", label: "Crosses above Fast MA" },{ value: "below_fast", label: "Crosses below Fast MA" },{ value: "above_slow", label: "Crosses above Slow MA" },{ value: "below_slow", label: "Crosses below Slow MA" }]},
+      { value: "candlestick",   label: "Candlestick Pattern",    hasPattern: true },
+      { value: "cdc_actionzone", label: "CDC ActionZone V3",       hasCompare: true,
+        compares: [
+          { value: "buy",      label: "Buy Signal (1st Green from Bear trend)" },
+          { value: "sell",     label: "Sell Signal (1st Red from Bull trend)" },
+          { value: "bullish",  label: "Is in Bullish trend" },
+          { value: "bearish",  label: "Is in Bearish trend" },
+          { value: "green",    label: "Green Zone — Buy Zone (Bull + Price > FastMA)" },
+          { value: "red",      label: "Red Zone — Sell Zone (Bear + Price < FastMA)" },
+          { value: "blue",     label: "Blue Zone — Pre-Buy 2 (Bear + Price > both MAs)" },
+          { value: "lblue",    label: "Light Blue — Pre-Buy 1 (Bear + Price > FastMA)" },
+          { value: "orange",   label: "Orange Zone — Pre-Sell 2 (Bull + Price < both MAs)" },
+          { value: "yellow",   label: "Yellow Zone — Pre-Sell 1 (Bull + Price < FastMA)" },
+        ]
+      },
+      { value: "rsi_divergence", label: "RSI Divergence/Convergence", hasCompare: true,
+        compares: [
+          { value: "buy",         label: "🟢 Buy Signal — Bullish Div + RSI crosses above oversold" },
+          { value: "sell",        label: "🔴 Sell Signal — Bearish Div + RSI crosses below overbought" },
+          { value: "buy_mom",     label: "⚡ Bull Div starts (momentum entry)" },
+          { value: "sell_mom",    label: "⚡ Bear Div starts (momentum exit)" },
+          { value: "bull",        label: "📈 Bullish Divergence active (price↓ RSI↑, oversold)" },
+          { value: "bear",        label: "📉 Bearish Divergence active (price↑ RSI↓, overbought)" },
+          { value: "hidden_bull", label: "🔵 Hidden Bullish Div (price↑ RSI↓ < 50, uptrend pullback)" },
+          { value: "hidden_bear", label: "🟠 Hidden Bearish Div (price↓ RSI↑ > 50, downtrend bounce)" },
+          { value: "conv_bull",   label: "💪 Bullish Convergence (price↑ RSI↑ > 50, strong bull)" },
+          { value: "conv_bear",   label: "💀 Bearish Convergence (price↓ RSI↓ < 50, strong bear)" },
+        ]
+      },
+    ];
+
+    const DEFAULT_ENTRY = { indicator: "ma_crossover", direction: "bullish", compare: "", value: "" };
+    const DEFAULT_EXIT  = { indicator: "ma_crossover", direction: "bearish", compare: "", value: "" };
+
+    const TIMEFRAMES = [
+      { value: "1m",  label: "1 Minute",   hint: "max 7d" },{ value: "2m",  label: "2 Minutes",  hint: "max 60d" },
+      { value: "5m",  label: "5 Minutes",  hint: "max 60d" },{ value: "15m", label: "15 Minutes", hint: "max 60d" },
+      { value: "30m", label: "30 Minutes", hint: "max 60d" },{ value: "1h",  label: "1 Hour",     hint: "max 730d" },
+      { value: "1d",  label: "1 Day",      hint: "no limit" },{ value: "5d",  label: "5 Days",     hint: "no limit" },
+      { value: "1wk", label: "1 Week",     hint: "no limit" },{ value: "1mo", label: "1 Month",    hint: "no limit" },
+    ];
+
+    const STOCK_TICKERS = [
+      { symbol: "SPY", name: "S&P 500 ETF" },{ symbol: "QQQ", name: "Nasdaq 100 ETF" },{ symbol: "DIA", name: "Dow Jones ETF" },
+      { symbol: "IWM", name: "Russell 2000 ETF" },{ symbol: "AAPL", name: "Apple" },{ symbol: "MSFT", name: "Microsoft" },
+      { symbol: "GOOGL", name: "Alphabet" },{ symbol: "AMZN", name: "Amazon" },{ symbol: "NVDA", name: "NVIDIA" },
+      { symbol: "META", name: "Meta" },{ symbol: "TSLA", name: "Tesla" },{ symbol: "AMD", name: "AMD" },
+      { symbol: "JPM", name: "JPMorgan" },{ symbol: "V", name: "Visa" },{ symbol: "JNJ", name: "Johnson & Johnson" },
+      { symbol: "WMT", name: "Walmart" },{ symbol: "XOM", name: "ExxonMobil" },{ symbol: "GLD", name: "Gold ETF" },
+      { symbol: "TLT", name: "20Y Treasury ETF" },{ symbol: "VIX", name: "Volatility Index" },
+    ];
+
+    const CRYPTO_TICKERS = [
+      { symbol: "BTC-USD", name: "Bitcoin" },{ symbol: "ETH-USD", name: "Ethereum" },{ symbol: "BNB-USD", name: "BNB" },
+      { symbol: "SOL-USD", name: "Solana" },{ symbol: "XRP-USD", name: "XRP" },{ symbol: "ADA-USD", name: "Cardano" },
+      { symbol: "DOGE-USD", name: "Dogecoin" },{ symbol: "AVAX-USD", name: "Avalanche" },{ symbol: "DOT-USD", name: "Polkadot" },
+      { symbol: "MATIC-USD", name: "Polygon" },{ symbol: "LINK-USD", name: "Chainlink" },{ symbol: "UNI7083-USD", name: "Uniswap" },
+      { symbol: "ATOM-USD", name: "Cosmos" },{ symbol: "LTC-USD", name: "Litecoin" },{ symbol: "NEAR-USD", name: "NEAR" },
+      { symbol: "ARB11841-USD", name: "Arbitrum" },
+    ];
+
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+    const SunIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+    const MoonIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+
+    function generateAIAnalysis(m, bm) {
+      const parts = [];
+      parts.push(`This ${m.period} backtest on the selected asset returned ${m.total_return_pct}% vs the benchmark's ${bm.total_return_pct}%.`);
+      if (m.total_return_pct > bm.total_return_pct) parts.push("The strategy outperformed buy & hold.");
+      else parts.push("The strategy underperformed buy & hold.");
+      if (m.sharpe_ratio > 1) parts.push(`With a Sharpe ratio of ${m.sharpe_ratio?.toFixed(2)}, the risk-adjusted return is strong.`);
+      else if (m.sharpe_ratio > 0) parts.push(`The Sharpe ratio of ${m.sharpe_ratio?.toFixed(2)} indicates moderate risk-adjusted performance.`);
+      else parts.push(`A negative Sharpe ratio suggests the strategy's returns don't compensate for the risk taken.`);
+      if (m.max_drawdown) parts.push(`Maximum drawdown reached ${Math.abs(m.max_drawdown).toFixed(2)}% during the period${m.max_drawdown_duration ? `, lasting ${m.max_drawdown_duration}` : ''}.`);
+      if (m.win_rate) { if (m.win_rate > 50) parts.push(`Win rate of ${m.win_rate}% is favorable.`); else parts.push(`Win rate of ${m.win_rate}% means more losing trades than winning ones.`); }
+      if (m.profit_factor > 1) parts.push(`Profit factor of ${m.profit_factor?.toFixed(2)} means profits exceed losses.`);
+      else if (m.profit_factor) parts.push(`Profit factor below 1 indicates losses exceed profits overall.`);
+      parts.push(`Total of ${m.total_trades} trades were executed, with $${m.total_fees_paid?.toFixed(2) || '0'} in fees paid.`);
+      return parts.join(' ');
+    }
+
+    function MetricCard({ label, value, sub, colored, tooltip }) {
+      let cls = "";
+      if (colored && value != null) { const num = parseFloat(String(value).replace(/[%$,]/g, "")); if (!isNaN(num)) cls = num >= 0 ? "positive" : "negative"; }
+      return (<div className="metric-card" title={tooltip || ""}><div className="label">{label}</div><div className={`value ${cls}`}>{value ?? "—"}</div>{sub && <div className="sub">{sub}</div>}</div>);
+    }
+
+    function Chart({ data, layout, style }) {
+      const ref = useRef(null);
+      const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme'));
+      useEffect(() => {
+        const obs = new MutationObserver(() => setTheme(document.documentElement.getAttribute('data-theme')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        return () => obs.disconnect();
+      }, []);
+      useEffect(() => {
+        if (ref.current && data) {
+          const isDark = theme === 'dark';
+          const gc = isDark ? '#1a2642' : '#e5e9f0';
+          const tc = isDark ? '#5e6e8a' : '#6b7280';
+          const lc = isDark ? '#e8ecf4' : '#111827';
+          Plotly.newPlot(ref.current, data, {
+            ...layout, paper_bgcolor: "transparent", plot_bgcolor: "transparent",
+            font: { color: tc, size: 11, family: "'Sarabun', sans-serif" },
+            margin: { l: 55, r: 20, t: 10, b: 40 },
+            xaxis: { gridcolor: gc, zerolinecolor: gc, ...(layout?.xaxis || {}) },
+            yaxis: { gridcolor: gc, zerolinecolor: gc, ...(layout?.yaxis || {}) },
+            legend: { bgcolor: "transparent", font: { color: lc, size: 12 } },
+          }, { responsive: true, displayModeBar: false });
+        }
+        return () => { if (ref.current) Plotly.purge(ref.current); };
+      }, [data, layout, theme]);
+      return <div ref={ref} style={{ width: "100%", height: 350, ...style }} />;
+    }
+
+    function MonthlyHeatmap({ data }) {
+      if (!data || data.length === 0) return <div className="loader">No monthly data available</div>;
+      const years = [...new Set(data.map(d => d.year))].sort();
+      const lookup = {};
+      data.forEach(d => { lookup[`${d.year}-${d.month}`] = d.return; });
+      const getColor = (val) => {
+        if (val == null) return "transparent";
+        const dk = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (val > 10) return dk ? "rgba(0,196,140,0.65)" : "rgba(0,167,111,0.55)";
+        if (val > 5)  return dk ? "rgba(0,196,140,0.4)"  : "rgba(0,167,111,0.3)";
+        if (val > 0)  return dk ? "rgba(0,196,140,0.18)" : "rgba(0,167,111,0.12)";
+        if (val > -5) return dk ? "rgba(255,87,87,0.18)" : "rgba(229,62,62,0.12)";
+        if (val > -10)return dk ? "rgba(255,87,87,0.4)"  : "rgba(229,62,62,0.3)";
+        return dk ? "rgba(255,87,87,0.65)" : "rgba(229,62,62,0.55)";
+      };
+      return (
+        <div className="heatmap-grid">
+          <div className="heatmap-header"></div>
+          {MONTHS.map(m => <div key={m} className="heatmap-header">{m}</div>)}
+          {years.map(year => (
+            <React.Fragment key={year}>
+              <div className="heatmap-header">{year}</div>
+              {Array.from({ length: 12 }, (_, i) => {
+                const val = lookup[`${year}-${i + 1}`];
+                return <div key={i} className="heatmap-cell" style={{ background: getColor(val), color: val != null ? "var(--text-primary)" : "var(--text-muted)" }}>{val != null ? `${val.toFixed(1)}%` : "—"}</div>;
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      );
+    }
+
+    function App() {
+      const [theme, setTheme] = useState('dark');
+      const [assetClass, setAssetClass] = useState("stock");
+      const [ticker, setTicker] = useState("SPY");
+      const [showSymbols, setShowSymbols] = useState(false);
+      const [startDate, setStartDate] = useState("2022-01-01");
+      const [endDate, setEndDate] = useState("2025-12-31");
+      const [interval, setInterval] = useState("1d");
+      const [entryConds, setEntryConds] = useState([{ indicator: "ma_crossover", direction: "bullish", compare: "", value: "" }]);
+      const [exitConds, setExitConds] = useState([{ indicator: "ma_crossover", direction: "bearish", compare: "", value: "" }]);
+      const [entryLogic, setEntryLogic] = useState("AND");
+      const [exitLogic, setExitLogic] = useState("AND");
+      const [maType, setMaType] = useState("SMA");
+      const [fastMa, setFastMa] = useState(10);
+      const [slowMa, setSlowMa] = useState(30);
+      const [rsiPeriod, setRsiPeriod] = useState(14);
+      const [rsiUpper, setRsiUpper] = useState(70);
+      const [rsiLower, setRsiLower] = useState(30);
+      const [bbPeriod, setBbPeriod] = useState(20);
+      const [bbStd, setBbStd] = useState(2.0);
+      const [macdFast, setMacdFast] = useState(12);
+      const [macdSlow, setMacdSlow] = useState(26);
+      const [macdSignal, setMacdSignal] = useState(9);
+      const [initCash, setInitCash] = useState(10000);
+      const [fees, setFees] = useState(0.1);
+      const [slippage, setSlippage] = useState(0.1);
+      const [slStop, setSlStop] = useState(0);
+      const [tpStop, setTpStop] = useState(0);
+      const [tab, setTab] = useState("overview");
+      const [loading, setLoading] = useState(false);
+      const [optimizing, setOptimizing] = useState(false);
+      const [results, setResults] = useState(null);
+      const [optResults, setOptResults] = useState(null);
+      const [error, setError] = useState(null);
+      const [optParams, setOptParams] = useState([{ name: "fast_ma", start: 5, end: 30, step: 5 },{ name: "slow_ma", start: 20, end: 60, step: 5 }]);
+      const [showIndicators, setShowIndicators] = useState(false);
+      const [showPortfolio, setShowPortfolio] = useState(false);
+      const [showOptimization, setShowOptimization] = useState(false);
+      const [overlayPatterns, setOverlayPatterns] = useState([]);
+      const [nextBarOpen, setNextBarOpen] = useState(true);
+      const [cdcFast, setCdcFast] = useState(12);
+      const [cdcSlow, setCdcSlow] = useState(26);
+      const [cdcSmooth, setCdcSmooth] = useState(1);
+      const [divWindow, setDivWindow] = useState(14);
+      const [corrResults, setCorrResults] = useState(null);
+      const [loadingCorr, setLoadingCorr] = useState(false);
+
+      const toggleTheme = () => { const next = theme === 'dark' ? 'light' : 'dark'; setTheme(next); document.documentElement.setAttribute('data-theme', next); };
+
+      useEffect(() => { const handler = () => setShowSymbols(false); document.addEventListener("click", handler); return () => document.removeEventListener("click", handler); }, []);
+
+      const getParams = () => ({
+        entry_conditions: entryConds.map(c => ({ indicator: c.indicator, direction: c.direction || "bullish", compare: c.compare || "", value: c.value ? Number(c.value) : 0, pattern: c.pattern || "" })),
+        exit_conditions: exitConds.map(c => ({ indicator: c.indicator, direction: c.direction || "bearish", compare: c.compare || "", value: c.value ? Number(c.value) : 0, pattern: c.pattern || "" })),
+        entry_logic: entryLogic, exit_logic: exitLogic, ma_type: maType,
+        fast_ma: Number(fastMa), slow_ma: Number(slowMa), rsi_period: Number(rsiPeriod),
+        rsi_upper: Number(rsiUpper), rsi_lower: Number(rsiLower),
+        bb_period: Number(bbPeriod), bb_std: Number(bbStd),
+        macd_fast: Number(macdFast), macd_slow: Number(macdSlow), macd_signal: Number(macdSignal),
+        init_cash: Number(initCash), fees: Number(fees) / 100, slippage: Number(slippage) / 100,
+        sl_stop: Number(slStop) || null, tp_stop: Number(tpStop) || null,
+        cdc_fast: Number(cdcFast), cdc_slow: Number(cdcSlow), cdc_smooth: Number(cdcSmooth),
+        div_window: Number(divWindow),
+        next_bar_open: nextBarOpen,
+      });
+
+      const loadCorrelation = async () => {
+        setLoadingCorr(true); setError(null);
+        try {
+          const res = await fetch(`${API}/correlation`, { method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticker, start: startDate, end: endDate, interval }) });
+          const text = await res.text();
+          let data;
+          try { data = JSON.parse(text); }
+          catch { throw new Error(`Backend returned an unexpected response. Make sure the backend server is running at ${API} (run: python3 backend.py)`); }
+          if (data.error) throw new Error(data.error);
+          setCorrResults(data);
+        } catch (e) { setError(e.message); } finally { setLoadingCorr(false); }
+      };
+
+      useEffect(() => {
+        if (tab === "correlation") loadCorrelation();
+      }, [tab]);
+
+      const runBacktest = async () => {
+        setLoading(true); setError(null);
+        try {
+          const res = await fetch(`${API}/backtest`, { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticker, start: startDate, end: endDate, interval, params: getParams() }) });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          setResults(data); setTab("overview");
+        } catch (e) { setError(e.message); } finally { setLoading(false); }
+      };
+
+      const runOptimization = async () => {
+        setOptimizing(true); setError(null);
+        try {
+          const optimization = {};
+          optParams.forEach(p => { optimization[p.name] = { start: Number(p.start), end: Number(p.end), step: Number(p.step) }; });
+          const res = await fetch(`${API}/optimize`, { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticker, start: startDate, end: endDate, interval, params: getParams(), optimization }) });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          setOptResults(data); setTab("optimize");
+        } catch (e) { setError(e.message); } finally { setOptimizing(false); }
+      };
+
+      const renderSidebar = () => (
+        <div className="sidebar">
+          <div className="section">
+            <div className="section-title">Market Data</div>
+            <div className="symbol-search" onClick={e => e.stopPropagation()}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-tertiary)", marginBottom: 4 }}>Symbol</label>
+              <input value={ticker} onChange={e => { setTicker(e.target.value.toUpperCase()); setShowSymbols(true); }} onFocus={() => setShowSymbols(true)} placeholder="Search stocks or crypto..." />
+              {showSymbols && (() => {
+                const q = ticker.toLowerCase();
+                const all = [...STOCK_TICKERS.map(t => ({ ...t, type: "stock" })), ...CRYPTO_TICKERS.map(t => ({ ...t, type: "crypto" }))];
+                const f = q.length === 0 ? all : all.filter(t => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
+                if (f.length === 0) return null;
+                return (<div className="symbol-dropdown">{f.slice(0, 15).map(t => (
+                  <div key={t.symbol} className="symbol-item" onMouseDown={e => { e.preventDefault(); setTicker(t.symbol); setAssetClass(t.type); setShowSymbols(false); }}>
+                    <div><span className="sym">{t.symbol}</span><span className="name">{t.name}</span></div>
+                    <span className={`tag ${t.type === "stock" ? "tag-stock" : "tag-crypto"}`}>{t.type === "stock" ? "STOCK" : "CRYPTO"}</span>
+                  </div>
+                ))}</div>);
+              })()}
+            </div>
+            <div className="form-group"><label>Timeframe</label>
+              <select value={interval} onChange={e => setInterval(e.target.value)}>{TIMEFRAMES.map(tf => <option key={tf.value} value={tf.value}>{tf.label} ({tf.hint})</option>)}</select>
+            </div>
+            <div className="form-row">
+              <div className="form-group"><label>Start Date</label><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
+              <div className="form-group"><label>End Date</label><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
+            </div>
+          </div>
+
+          <div className="section">
+            <div className="section-title-row"><span className="entry-label">Entry Conditions</span>
+              <button className="add-condition-btn" onClick={() => setEntryConds([...entryConds, { ...DEFAULT_ENTRY }])}>+ Add</button></div>
+            {entryConds.length > 1 && (<div className="logic-toggle">
+              <button className={entryLogic === "AND" ? "active" : ""} onClick={() => setEntryLogic("AND")}>ALL (AND)</button>
+              <button className={entryLogic === "OR" ? "active" : ""} onClick={() => setEntryLogic("OR")}>ANY (OR)</button></div>)}
+            {entryConds.map((cond, i) => {
+              const opt = INDICATOR_OPTIONS.find(o => o.value === cond.indicator) || {};
+              const cdlInfo = CDL_PATTERNS.find(p => p.value === (cond.pattern || "cdl_hammer"));
+              return (<div key={i} className="condition-card">
+                {entryConds.length > 1 && <button className="remove-btn" onClick={() => setEntryConds(entryConds.filter((_, j) => j !== i))}>×</button>}
+                <div className="form-group"><label>Indicator</label>
+                  <select value={cond.indicator} onChange={e => { const nc = [...entryConds]; nc[i] = { ...nc[i], indicator: e.target.value, pattern: "cdl_hammer" }; setEntryConds(nc); }}>
+                    {INDICATOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+                <div className="condition-row">
+                  {opt.hasDirection && <div className="form-group"><label>Direction</label>
+                    <select value={cond.direction || "bullish"} onChange={e => { const nc = [...entryConds]; nc[i] = { ...nc[i], direction: e.target.value }; setEntryConds(nc); }}>
+                      <option value="bullish">Bullish</option><option value="bearish">Bearish</option></select></div>}
+                  {opt.hasCompare && <div className="form-group"><label>Condition</label>
+                    <select value={cond.compare || (opt.compares?.[0]?.value || "")} onChange={e => { const nc = [...entryConds]; nc[i] = { ...nc[i], compare: e.target.value }; setEntryConds(nc); }}>
+                      {(opt.compares || []).map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>}
+                  {opt.hasValue && <div className="form-group"><label>Threshold</label>
+                    <input type="number" value={cond.value || ""} placeholder="e.g. 30" onChange={e => { const nc = [...entryConds]; nc[i] = { ...nc[i], value: e.target.value }; setEntryConds(nc); }} /></div>}
+                  {opt.hasPattern && <div className="form-group" style={{gridColumn:"1/-1"}}><label>Pattern</label>
+                    <select value={cond.pattern || "cdl_hammer"} onChange={e => { const nc = [...entryConds]; nc[i] = { ...nc[i], pattern: e.target.value }; setEntryConds(nc); }}>
+                      {CDL_PATTERNS.map(p => <option key={p.value} value={p.value}>{p.label} ({p.type})</option>)}</select>
+                    {cdlInfo && <div style={{fontSize:11,marginTop:3,color:cdlInfo.type==="bullish"?"var(--green)":cdlInfo.type==="bearish"?"var(--red)":"var(--yellow)"}}>{cdlInfo.type === "bullish" ? "▲ Bullish signal" : cdlInfo.type === "bearish" ? "▼ Bearish signal" : "◆ Neutral signal"}</div>}
+                  </div>}
+                </div></div>);
+            })}
+          </div>
+
+          <div className="section">
+            <div className="section-title-row"><span className="exit-label">Exit Conditions</span>
+              <button className="add-condition-btn" onClick={() => setExitConds([...exitConds, { ...DEFAULT_EXIT }])}>+ Add</button></div>
+            {exitConds.length > 1 && (<div className="logic-toggle">
+              <button className={exitLogic === "AND" ? "active" : ""} onClick={() => setExitLogic("AND")}>ALL (AND)</button>
+              <button className={exitLogic === "OR" ? "active" : ""} onClick={() => setExitLogic("OR")}>ANY (OR)</button></div>)}
+            {exitConds.map((cond, i) => {
+              const opt = INDICATOR_OPTIONS.find(o => o.value === cond.indicator) || {};
+              const cdlInfo = CDL_PATTERNS.find(p => p.value === (cond.pattern || "cdl_shooting_star"));
+              return (<div key={i} className="condition-card">
+                {exitConds.length > 1 && <button className="remove-btn" onClick={() => setExitConds(exitConds.filter((_, j) => j !== i))}>×</button>}
+                <div className="form-group"><label>Indicator</label>
+                  <select value={cond.indicator} onChange={e => { const nc = [...exitConds]; nc[i] = { ...nc[i], indicator: e.target.value, pattern: "cdl_shooting_star" }; setExitConds(nc); }}>
+                    {INDICATOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+                <div className="condition-row">
+                  {opt.hasDirection && <div className="form-group"><label>Direction</label>
+                    <select value={cond.direction || "bearish"} onChange={e => { const nc = [...exitConds]; nc[i] = { ...nc[i], direction: e.target.value }; setExitConds(nc); }}>
+                      <option value="bullish">Bullish</option><option value="bearish">Bearish</option></select></div>}
+                  {opt.hasCompare && <div className="form-group"><label>Condition</label>
+                    <select value={cond.compare || (opt.compares?.[0]?.value || "")} onChange={e => { const nc = [...exitConds]; nc[i] = { ...nc[i], compare: e.target.value }; setExitConds(nc); }}>
+                      {(opt.compares || []).map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>}
+                  {opt.hasValue && <div className="form-group"><label>Threshold</label>
+                    <input type="number" value={cond.value || ""} placeholder="e.g. 70" onChange={e => { const nc = [...exitConds]; nc[i] = { ...nc[i], value: e.target.value }; setExitConds(nc); }} /></div>}
+                  {opt.hasPattern && <div className="form-group" style={{gridColumn:"1/-1"}}><label>Pattern</label>
+                    <select value={cond.pattern || "cdl_shooting_star"} onChange={e => { const nc = [...exitConds]; nc[i] = { ...nc[i], pattern: e.target.value }; setExitConds(nc); }}>
+                      {CDL_PATTERNS.map(p => <option key={p.value} value={p.value}>{p.label} ({p.type})</option>)}</select>
+                    {cdlInfo && <div style={{fontSize:11,marginTop:3,color:cdlInfo.type==="bullish"?"var(--green)":cdlInfo.type==="bearish"?"var(--red)":"var(--yellow)"}}>{cdlInfo.type === "bullish" ? "▲ Bullish signal" : cdlInfo.type === "bearish" ? "▼ Bearish signal" : "◆ Neutral signal"}</div>}
+                  </div>}
+                </div></div>);
+            })}
+          </div>
+
+          <div className="section">
+            <div className="section-title" style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", userSelect: "none" }}
+                 onClick={() => setShowIndicators(!showIndicators)}>
+              Indicator Parameters
+              <span style={{ fontSize: 14, transition: "transform 0.2s", transform: showIndicators ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+            </div>
+            {showIndicators && (<>
+              <div className="form-group"><label>MA Type</label><select value={maType} onChange={e => setMaType(e.target.value)}><option value="SMA">SMA</option><option value="EMA">EMA</option></select></div>
+              <div className="form-row"><div className="form-group"><label>Fast MA</label><input type="number" value={fastMa} onChange={e => setFastMa(e.target.value)} min="2" /></div>
+                <div className="form-group"><label>Slow MA</label><input type="number" value={slowMa} onChange={e => setSlowMa(e.target.value)} min="2" /></div></div>
+              <div className="form-group"><label>RSI Period</label><input type="number" value={rsiPeriod} onChange={e => setRsiPeriod(e.target.value)} min="2" /></div>
+              <div className="form-row"><div className="form-group"><label>BB Period</label><input type="number" value={bbPeriod} onChange={e => setBbPeriod(e.target.value)} min="2" /></div>
+                <div className="form-group"><label>BB Std Dev</label><input type="number" value={bbStd} onChange={e => setBbStd(e.target.value)} min="0.5" step="0.1" /></div></div>
+              <div className="form-row"><div className="form-group"><label>MACD Fast</label><input type="number" value={macdFast} onChange={e => setMacdFast(e.target.value)} min="2" /></div>
+                <div className="form-group"><label>MACD Slow</label><input type="number" value={macdSlow} onChange={e => setMacdSlow(e.target.value)} min="2" /></div></div>
+              <div className="form-group"><label>MACD Signal</label><input type="number" value={macdSignal} onChange={e => setMacdSignal(e.target.value)} min="2" /></div>
+
+              {/* ── CDC ActionZone Parameters ── */}
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--border-light)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "var(--text-tertiary)" }}>CDC ActionZone V3</div>
+                  <button className="btn btn-secondary" style={{ width: "auto", padding: "3px 10px", marginTop: 0, fontSize: 11, color: "var(--green)", borderColor: "var(--green)" }}
+                    onClick={() => {
+                      setEntryConds([{ indicator: "cdc_actionzone", compare: "buy", direction: "bullish", value: "", pattern: "" }]);
+                      setExitConds([{ indicator: "cdc_actionzone", compare: "sell", direction: "bearish", value: "", pattern: "" }]);
+                    }}>⚡ Load Preset</button>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 8 }}>
+                  EMA crossover-based zone strategy. Buy on 1st Green bar, sell on 1st Red bar.
+                </div>
+                <div className="form-row">
+                  <div className="form-group"><label>Fast EMA</label><input type="number" value={cdcFast} onChange={e => setCdcFast(e.target.value)} min="2" /></div>
+                  <div className="form-group"><label>Slow EMA</label><input type="number" value={cdcSlow} onChange={e => setCdcSlow(e.target.value)} min="2" /></div>
+                </div>
+                <div className="form-group"><label>Smoothing (1 = off)</label><input type="number" value={cdcSmooth} onChange={e => setCdcSmooth(e.target.value)} min="1" /></div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px", marginTop: 6 }}>
+                  {[["green","#00c48c","Buy Zone"],["blue","#2563eb","Pre-Buy 2"],["lblue","#00b8d9","Pre-Buy 1"],
+                    ["red","#ff5757","Sell Zone"],["orange","#f97316","Pre-Sell 2"],["yellow","#eab308","Pre-Sell 1"]].map(([zone, col, lbl]) => (
+                    <span key={zone} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: col + "22", color: col, fontWeight: 600, border: `1px solid ${col}44` }}>{lbl}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── RSI Divergence Parameters ── */}
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--border-light)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "var(--text-tertiary)" }}>RSI Divergence / Convergence</div>
+                  <button className="btn btn-secondary" style={{ width: "auto", padding: "3px 10px", marginTop: 0, fontSize: 11, color: "#a78bfa", borderColor: "#a78bfa" }}
+                    onClick={() => {
+                      setEntryConds([{ indicator: "rsi_divergence", compare: "buy", direction: "bullish", value: "", pattern: "" }]);
+                      setExitConds([{ indicator: "rsi_divergence", compare: "sell", direction: "bearish", value: "", pattern: "" }]);
+                    }}>⚡ Load Preset</button>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 8 }}>
+                  Detects RSI divergence/convergence vs price. Entry on bullish div + RSI cross above oversold; exit on bearish div + RSI cross below overbought.
+                </div>
+                <div className="form-group">
+                  <label>Divergence Window (bars)</label>
+                  <input type="number" value={divWindow} onChange={e => setDivWindow(e.target.value)} min="5" max="50" />
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px", marginTop: 6 }}>
+                  {[["📈 Bull Div","#00c48c"],["📉 Bear Div","#ff5757"],["🔵 Hidden Bull","#00b8d9"],["🟠 Hidden Bear","#f97316"],["💪 Bull Conv","#22d3ee"],["💀 Bear Conv","#a78bfa"]].map(([lbl, col]) => (
+                    <span key={lbl} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: col + "22", color: col, fontWeight: 600, border: `1px solid ${col}44` }}>{lbl}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--border-light)" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "var(--text-tertiary)", marginBottom: 8 }}>Candlestick Overlay</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 8 }}>Select patterns to display as markers on the price chart after running backtest.</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 8px" }}>
+                  {CDL_PATTERNS.map(p => {
+                    const active = overlayPatterns.includes(p.value);
+                    const col = p.type === "bullish" ? "var(--green)" : p.type === "bearish" ? "var(--red)" : "var(--yellow)";
+                    return (
+                      <label key={p.value} style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", padding: "3px 0", fontSize: 11 }}>
+                        <input type="checkbox" checked={active} onChange={() => setOverlayPatterns(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])} style={{ cursor: "pointer", accentColor: col }} />
+                        <span style={{ color: active ? col : "var(--text-secondary)", fontWeight: active ? 600 : 400 }}>{p.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {overlayPatterns.length > 0 && (
+                  <button className="btn btn-secondary" style={{ marginTop: 6, padding: "4px 10px", fontSize: 11, width: "auto" }}
+                    onClick={() => setOverlayPatterns([])}>Clear All</button>
+                )}
+              </div>
+            </>)}
+          </div>
+
+          <div className="section">
+            <div className="section-title" style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", userSelect: "none" }}
+                 onClick={() => setShowPortfolio(!showPortfolio)}>
+              Portfolio Settings
+              <span style={{ fontSize: 14, transition: "transform 0.2s", transform: showPortfolio ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+            </div>
+            {showPortfolio && (<>
+              <div className="form-group"><label>Initial Capital ($)</label><input type="number" value={initCash} onChange={e => setInitCash(e.target.value)} min="100" /></div>
+              <div className="form-row"><div className="form-group"><label>Fees (%)</label><input type="number" value={fees} onChange={e => setFees(e.target.value)} min="0" step="0.01" /></div>
+                <div className="form-group"><label>Slippage (%)</label><input type="number" value={slippage} onChange={e => setSlippage(e.target.value)} min="0" step="0.01" /></div></div>
+              <div className="form-row"><div className="form-group"><label>Stop Loss (%)</label><input type="number" value={slStop} onChange={e => setSlStop(e.target.value)} min="0" step="0.5" placeholder="0 = off" /></div>
+                <div className="form-group"><label>Take Profit (%)</label><input type="number" value={tpStop} onChange={e => setTpStop(e.target.value)} min="0" step="0.5" placeholder="0 = off" /></div></div>
+
+              {/* Next Bar Open Execution toggle */}
+              <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 8, background: nextBarOpen ? "var(--green-light)" : "var(--red-light)", border: `1px solid ${nextBarOpen ? "rgba(0,196,140,0.25)" : "rgba(255,87,87,0.2)"}` }}>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                  <input type="checkbox" checked={nextBarOpen} onChange={e => setNextBarOpen(e.target.checked)}
+                    style={{ marginTop: 2, accentColor: nextBarOpen ? "var(--green)" : "var(--red)", cursor: "pointer" }} />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: nextBarOpen ? "var(--green)" : "var(--text-secondary)" }}>
+                      Execute at Next Bar Open {nextBarOpen ? "✓ (Recommended)" : "(Off)"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 3, lineHeight: 1.5 }}>
+                      {nextBarOpen
+                        ? "Signal fires at close of bar N → order fills at open of bar N+1. Realistic, no look-ahead bias."
+                        : "Order fills at close of the signal bar itself. Can introduce unrealistic results for EOD strategies."}
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </>)}
+          </div>
+
+          <div className="section">
+            <button className="btn btn-primary" onClick={runBacktest} disabled={loading || optimizing}>{loading ? "Running Backtest..." : "Run Backtest"}</button>
+          </div>
+
+          <div className="section">
+            <div className="section-title" style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", userSelect: "none" }}
+                 onClick={() => setShowOptimization(!showOptimization)}>
+              Optimization Grid
+              <span style={{ fontSize: 14, transition: "transform 0.2s", transform: showOptimization ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+            </div>
+            {showOptimization && (<>
+              {optParams.map((p, i) => (
+                <div key={i} className="opt-param-row">
+                  <div className="form-group"><label>Parameter</label><select value={p.name} onChange={e => { const np = [...optParams]; np[i].name = e.target.value; setOptParams(np); }}>
+                    <option value="fast_ma">Fast MA</option><option value="slow_ma">Slow MA</option><option value="rsi_period">RSI Period</option>
+                    <option value="rsi_upper">RSI Upper</option><option value="rsi_lower">RSI Lower</option><option value="bb_period">BB Period</option>
+                    <option value="bb_std">BB Std</option><option value="macd_fast">MACD Fast</option><option value="macd_slow">MACD Slow</option><option value="macd_signal">MACD Signal</option></select></div>
+                  <div className="form-group"><label>From</label><input type="number" value={p.start} onChange={e => { const np = [...optParams]; np[i].start = e.target.value; setOptParams(np); }} /></div>
+                  <div className="form-group"><label>To</label><input type="number" value={p.end} onChange={e => { const np = [...optParams]; np[i].end = e.target.value; setOptParams(np); }} /></div>
+                  <div className="form-group"><label>Step</label><input type="number" value={p.step} onChange={e => { const np = [...optParams]; np[i].step = e.target.value; setOptParams(np); }} /></div>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                <button className="btn btn-secondary" style={{ flex: 1, marginTop: 0, fontSize: 12 }} onClick={() => setOptParams([...optParams, { name: "fast_ma", start: 5, end: 30, step: 5 }])}>+ Add Parameter</button>
+                {optParams.length > 1 && <button className="btn btn-secondary" style={{ flex: 1, marginTop: 0, fontSize: 12 }} onClick={() => setOptParams(optParams.slice(0, -1))}>- Remove Last</button>}
+              </div>
+              <button className="btn btn-optimize" onClick={runOptimization} disabled={loading || optimizing}>{optimizing ? "Optimizing..." : "Run Optimization"}</button>
+            </>)}
+          </div>
+
+          {error && <div className="error-banner">{error}</div>}
+        </div>
+      );
+
+      const renderMain = () => {
+        if (loading) return <div className="loader"><div className="spinner" /><span>Running backtest on {ticker}...</span></div>;
+        if (optimizing) return <div className="loader"><div className="spinner" /><span>Running parameter optimization...</span></div>;
+        if (!results && !optResults) return (
+          <div className="empty-state">
+            <div className="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 3v18h18" /><path d="M7 16l4-8 4 4 4-6" /></svg></div>
+            <h3>efin.finance Backtesting (Prototype)</h3>
+            <p>Configure your strategy in the sidebar and click "Run Backtest" to analyze performance across stocks and crypto assets.</p>
+          </div>
+        );
+        return (<>
+          <div className="tabs">{["overview","charts","trades","monthly","correlation","optimize"].map(t => (
+            <button key={t} className={`tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
+              {t === "correlation" ? "Correlation" : t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}</div>
+          {tab === "overview" && results && renderOverview()}
+          {tab === "charts" && results && renderCharts()}
+          {tab === "trades" && results && renderTrades()}
+          {tab === "monthly" && results && renderMonthly()}
+          {tab === "correlation" && renderCorrelation()}
+          {tab === "optimize" && renderOptimize()}
+        </>);
+      };
+
+      const renderOverview = () => {
+        const m = results.metrics; const bm = results.benchmark;
+        const fmtDate = (d) => d ? d.split("T")[0] : "—";
+        return (<>
+          {/* Equity Curve — First */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title">Equity Curve</div>
+            <Chart data={[
+              { x: results.equity.dates, y: results.equity.equity, type: "scatter", mode: "lines", name: "Strategy", line: { color: "#2563eb", width: 2 } },
+              { x: results.equity.dates, y: results.benchmark.equity, type: "scatter", mode: "lines", name: "Buy & Hold", line: { color: "#5e6e8a", width: 1.5, dash: "dot" } },
+            ]} layout={{ yaxis: { title: "Portfolio Value ($)" }, showlegend: true }} />
+          </div>
+
+          {/* Period Info */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Backtest Summary</span>
+              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: 600,
+                background: results.next_bar_open ? "var(--green-light)" : "var(--red-light)",
+                color: results.next_bar_open ? "var(--green)" : "var(--red)",
+                border: `1px solid ${results.next_bar_open ? "rgba(0,196,140,0.3)" : "rgba(255,87,87,0.3)"}` }}>
+                {results.next_bar_open ? "✓ Next Bar Open Execution" : "⚠ Same Bar Close Execution"}
+              </span>
+            </div>
+            <div className="metrics-grid" style={{ marginBottom: 0 }}>
+              <MetricCard label="Start" value={fmtDate(m.start)} tooltip="Backtest start date" />
+              <MetricCard label="End" value={fmtDate(m.end)} tooltip="Backtest end date" />
+              <MetricCard label="Period" value={m.period} tooltip="Total duration of the backtest" />
+              <MetricCard label="Start Value" value={`$${m.start_value?.toLocaleString()}`} tooltip="Initial portfolio capital" />
+              <MetricCard label="End Value" value={`$${m.end_value?.toLocaleString(undefined, {maximumFractionDigits:2})}`} colored tooltip="Final portfolio value after all trades" />
+            </div>
+          </div>
+
+          {/* Return & Risk Metrics */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title">Returns & Risk</div>
+            <div className="metrics-grid" style={{ marginBottom: 0 }}>
+              <MetricCard label="Total Return" value={m.total_return_pct != null ? `${m.total_return_pct}%` : null} colored sub={`Final: $${m.end_value?.toLocaleString(undefined, {maximumFractionDigits:0})}`} tooltip="Total percentage return of the strategy" />
+              <MetricCard label="Benchmark Return" value={m.benchmark_return_pct != null ? `${m.benchmark_return_pct}%` : null} colored tooltip="Return of buy-and-hold strategy over the same period" />
+              <MetricCard label="Max Gross Exposure" value={m.max_gross_exposure != null ? `${m.max_gross_exposure}%` : null} tooltip="Maximum percentage of capital exposed to the market" />
+              <MetricCard label="Total Fees Paid" value={m.total_fees_paid != null ? `$${m.total_fees_paid?.toFixed(2)}` : "$0"} tooltip="Total trading fees and commissions paid" />
+              <MetricCard label="Max Drawdown" value={m.max_drawdown != null ? `-${Math.abs(m.max_drawdown).toFixed(2)}%` : null} colored tooltip="Largest peak-to-trough decline in portfolio value" />
+              <MetricCard label="Max DD Duration" value={m.max_drawdown_duration || "—"} tooltip="Longest time spent in drawdown before recovery" />
+            </div>
+          </div>
+
+          {/* Trade Stats */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title">Trade Statistics</div>
+            <div className="metrics-grid" style={{ marginBottom: 0 }}>
+              <MetricCard label="Total Trades" value={m.total_trades} tooltip="Total number of trades executed" />
+              <MetricCard label="Closed Trades" value={m.total_closed_trades} tooltip="Number of trades that have been completed" />
+              <MetricCard label="Open Trades" value={m.total_open_trades} tooltip="Number of trades still open at backtest end" />
+              <MetricCard label="Open Trade PnL" value={m.open_trade_pnl != null ? `$${m.open_trade_pnl?.toFixed(2)}` : "$0"} colored tooltip="Unrealized profit/loss from open trades" />
+              <MetricCard label="Win Rate" value={m.win_rate != null ? `${m.win_rate}%` : null} tooltip="Percentage of trades that were profitable" />
+              <MetricCard label="Best Trade" value={m.best_trade_pct != null ? `${m.best_trade_pct}%` : null} colored tooltip="Return of the most profitable single trade" />
+              <MetricCard label="Worst Trade" value={m.worst_trade_pct != null ? `${m.worst_trade_pct}%` : null} colored tooltip="Return of the least profitable single trade" />
+              <MetricCard label="Avg Winning Trade" value={m.avg_winning_trade_pct != null ? `${m.avg_winning_trade_pct}%` : null} colored tooltip="Average return of winning trades" />
+              <MetricCard label="Avg Losing Trade" value={m.avg_losing_trade_pct != null ? `${m.avg_losing_trade_pct}%` : null} colored tooltip="Average return of losing trades" />
+              <MetricCard label="Avg Win Duration" value={m.avg_winning_duration || "—"} tooltip="Average holding period for winning trades" />
+              <MetricCard label="Avg Loss Duration" value={m.avg_losing_duration || "—"} tooltip="Average holding period for losing trades" />
+              <MetricCard label="Profit Factor" value={m.profit_factor?.toFixed(2)} colored tooltip="Ratio of gross profits to gross losses (>1 is profitable)" />
+              <MetricCard label="Expectancy" value={m.expectancy?.toFixed(2)} colored tooltip="Average expected profit per trade" />
+            </div>
+          </div>
+
+          {/* Risk Ratios */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title">Risk-Adjusted Ratios</div>
+            <div className="metrics-grid" style={{ marginBottom: 0 }}>
+              <MetricCard label="Sharpe Ratio" value={m.sharpe_ratio?.toFixed(2)} colored tooltip="Risk-adjusted return (higher is better, >1 is good)" />
+              <MetricCard label="Calmar Ratio" value={m.calmar_ratio?.toFixed(2)} colored tooltip="Return relative to max drawdown (higher is better)" />
+              <MetricCard label="Omega Ratio" value={m.omega_ratio?.toFixed(2)} colored tooltip="Probability-weighted ratio of gains vs losses" />
+              <MetricCard label="Sortino Ratio" value={m.sortino_ratio?.toFixed(2)} colored tooltip="Like Sharpe but only penalizes downside volatility" />
+            </div>
+          </div>
+
+          {/* AI Analysis */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span>🤖</span> AI Strategy Analysis
+            </div>
+            <div style={{ padding: "12px 16px", background: "var(--accent-bg)", borderRadius: 8, fontSize: 13, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+              {generateAIAnalysis(m, bm)}
+            </div>
+          </div>
+
+          {/* Benchmark Comparison */}
+          <div className="chart-container">
+            <div className="chart-title">Strategy vs Buy & Hold</div>
+            <div className="metrics-grid" style={{ marginBottom: 0 }}>
+              <MetricCard label="Strategy Return" value={`${m.total_return_pct}%`} colored />
+              <MetricCard label="B&H Return" value={`${bm.total_return_pct}%`} colored />
+              <MetricCard label="B&H Sharpe" value={bm.sharpe?.toFixed(2)} colored />
+              <MetricCard label="B&H Max DD" value={`-${Math.abs(bm.max_drawdown).toFixed(2)}%`} colored />
+            </div>
+          </div>
+        </>);
+      };
+
+      const renderCharts = () => {
+        const ohlcv = results.ohlcv || {};
+        const patternTraces = overlayPatterns
+          .filter(pk => results.patterns?.[pk] && results.patterns[pk].dates.length > 0)
+          .map(pk => {
+            const pat = results.patterns[pk];
+            const color = pat.type === "bullish" ? "#00c48c" : pat.type === "bearish" ? "#ff5757" : "#ffb800";
+            const sym = pat.type === "bullish" ? "triangle-up" : pat.type === "bearish" ? "triangle-down" : "diamond";
+            return { x: pat.dates, y: pat.prices, type: "scatter", mode: "markers", name: `${pat.label} (${pat.count})`,
+              marker: { color, size: 11, symbol: sym, opacity: 0.9, line: { color: "#fff", width: 1 } },
+              hovertemplate: `${pat.label}<br>%{x|%Y-%m-%d}<extra></extra>` };
+          });
+        return (<>
+        {/* Candlestick Chart with Pattern Overlays */}
+        <div className="chart-container">
+          <div className="chart-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Candlestick Chart{overlayPatterns.length > 0 ? ` · ${overlayPatterns.length} pattern(s) overlaid` : ""}</span>
+            {overlayPatterns.length === 0 && <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 400 }}>Enable patterns in Indicator Parameters → Candlestick Overlay</span>}
+          </div>
+          {ohlcv.dates ? (
+            <Chart data={[
+              { x: ohlcv.dates, open: ohlcv.open, high: ohlcv.high, low: ohlcv.low, close: ohlcv.close,
+                type: "candlestick", name: ticker,
+                increasing: { line: { color: "#00c48c" }, fillcolor: "rgba(0,196,140,0.7)" },
+                decreasing: { line: { color: "#ff5757" }, fillcolor: "rgba(255,87,87,0.7)" },
+                hoverinfo: "x+y" },
+              { x: results.entry_dates, y: (results.entry_prices || []).map((p, i) => p != null ? p * 0.997 : null),
+                type: "scatter", mode: "markers", name: `Entry @ ${results.next_bar_open ? "Next Open" : "Same Close"}`, marker: { color: "#00c48c", size: 10, symbol: "triangle-up" },
+                hovertemplate: "Entry<br>Date: %{x}<br>Fill Price: $%{y:.2f}<extra></extra>" },
+              { x: results.exit_dates,  y: (results.exit_prices  || []).map((p, i) => p != null ? p * 1.003 : null),
+                type: "scatter", mode: "markers", name: `Exit @ ${results.next_bar_open ? "Next Open" : "Same Close"}`,  marker: { color: "#ff5757", size: 10, symbol: "triangle-down" },
+                hovertemplate: "Exit<br>Date: %{x}<br>Fill Price: $%{y:.2f}<extra></extra>" },
+              ...patternTraces,
+            ]} layout={{ showlegend: true, xaxis: { rangeslider: { visible: false } }, yaxis: { title: "Price" } }} style={{ height: 480 }} />
+          ) : <div className="loader">No OHLCV data available. Re-run backtest.</div>}
+        </div>
+
+        {/* Pattern Detection Summary */}
+        {results.patterns && Object.keys(results.patterns).length > 0 && (
+          <div className="chart-container">
+            <div className="chart-title">Detected Patterns Summary</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 8 }}>
+              {Object.entries(results.patterns).map(([key, pat]) => {
+                const isOverlay = overlayPatterns.includes(key);
+                const col = pat.type === "bullish" ? "var(--green)" : pat.type === "bearish" ? "var(--red)" : "var(--yellow)";
+                return (
+                  <div key={key} className="metric-card" style={{ cursor: "pointer", borderColor: isOverlay ? col : undefined, background: isOverlay ? (pat.type === "bullish" ? "var(--green-light)" : pat.type === "bearish" ? "var(--red-light)" : "rgba(255,184,0,0.08)") : undefined }}
+                    onClick={() => setOverlayPatterns(prev => isOverlay ? prev.filter(x => x !== key) : [...prev, key])}>
+                    <div className="label" style={{ color: col }}>{pat.label}</div>
+                    <div className="value" style={{ fontSize: 22, color: col }}>{pat.count}</div>
+                    <div className="sub">{pat.type} · {isOverlay ? "✓ shown" : "click to show"}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Price + MA Indicators (line chart) */}
+        <div className="chart-container">
+          <div className="chart-title">Price & Indicators</div>
+          <Chart data={[
+            { x: results.equity.dates, y: results.equity.close, type: "scatter", mode: "lines", name: "Close", line: { color: "#8b99b3", width: 1.5 } },
+            ...(results.indicators.fast_ma ? [{ x: results.equity.dates, y: results.indicators.fast_ma, type: "scatter", mode: "lines", name: "Fast MA", line: { color: "#2563eb", width: 1 } }] : []),
+            ...(results.indicators.slow_ma ? [{ x: results.equity.dates, y: results.indicators.slow_ma, type: "scatter", mode: "lines", name: "Slow MA", line: { color: "#eab308", width: 1 } }] : []),
+            ...(results.indicators.bb_upper ? [{ x: results.equity.dates, y: results.indicators.bb_upper, type: "scatter", mode: "lines", name: "BB Upper", line: { color: "#a78bfa", width: 1, dash: "dot" } }] : []),
+            ...(results.indicators.bb_lower ? [{ x: results.equity.dates, y: results.indicators.bb_lower, type: "scatter", mode: "lines", name: "BB Lower", line: { color: "#a78bfa", width: 1, dash: "dot" } }] : []),
+            { x: results.entry_dates, y: results.entry_prices || results.entry_dates.map(d => { const idx = results.equity.dates.indexOf(d); return idx >= 0 ? results.equity.close[idx] : null; }), type: "scatter", mode: "markers", name: `Entry (${results.next_bar_open ? "Next Open" : "Same Close"})`, marker: { color: "#00c48c", size: 8, symbol: "triangle-up" } },
+            { x: results.exit_dates,  y: results.exit_prices  || results.exit_dates.map(d => { const idx = results.equity.dates.indexOf(d); return idx >= 0 ? results.equity.close[idx] : null; }), type: "scatter", mode: "markers", name: `Exit (${results.next_bar_open ? "Next Open" : "Same Close"})`,  marker: { color: "#ff5757", size: 8, symbol: "triangle-down" } },
+          ]} layout={{ showlegend: true }} style={{ height: 350 }} />
+        </div>
+        {/* ── CDC ActionZone Chart ── */}
+        {results.indicators.cdc_zone && (() => {
+          const ZONE_FILL = { green:"rgba(0,196,140,0.13)", blue:"rgba(37,99,235,0.13)", lblue:"rgba(0,184,217,0.13)", red:"rgba(255,87,87,0.13)", orange:"rgba(249,115,22,0.13)", yellow:"rgba(234,179,8,0.13)", none:"rgba(0,0,0,0)" };
+          const ZONE_LINE = { green:"#00c48c", blue:"#2563eb", lblue:"#00b8d9", red:"#ff5757", orange:"#f97316", yellow:"#eab308", none:"transparent" };
+          const zones = results.indicators.cdc_zone;
+          const dates = results.equity.dates;
+          // Build Plotly shapes for zone backgrounds
+          const shapes = [];
+          let zStart = 0, curZone = zones[0];
+          for (let i = 1; i <= zones.length; i++) {
+            if (i === zones.length || zones[i] !== curZone) {
+              if (curZone !== "none") shapes.push({ type:"rect", xref:"x", yref:"paper", x0:dates[zStart], x1:dates[Math.min(i,dates.length-1)], y0:0, y1:1, fillcolor:ZONE_FILL[curZone]||"rgba(0,0,0,0)", line:{width:0}, layer:"below" });
+              if (i < zones.length) { curZone = zones[i]; zStart = i; }
+            }
+          }
+          const cdcBuyDates  = results.indicators.cdc_buy_dates  || [];
+          const cdcSellDates = results.indicators.cdc_sell_dates || [];
+          const cdcBuyPrices  = cdcBuyDates.map(d => { const i = dates.indexOf(d); return i >= 0 ? results.equity.close[i] * 0.997 : null; });
+          const cdcSellPrices = cdcSellDates.map(d => { const i = dates.indexOf(d); return i >= 0 ? results.equity.close[i] * 1.003 : null; });
+          return (
+            <div className="chart-container">
+              <div className="chart-title" style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span>CDC ActionZone V3 — Price Chart</span>
+                <div style={{ display:"flex", gap:6 }}>
+                  {[["green","#00c48c","Buy"],["blue","#2563eb","Pre-Buy 2"],["lblue","#00b8d9","Pre-Buy 1"],["red","#ff5757","Sell"],["orange","#f97316","Pre-Sell 2"],["yellow","#eab308","Pre-Sell 1"]].map(([z,c,l]) => (
+                    <span key={z} style={{ fontSize:10, padding:"2px 7px", borderRadius:4, background:c+"22", color:c, fontWeight:600 }}>{l}</span>
+                  ))}
+                </div>
+              </div>
+              <Chart data={[
+                { x: dates, y: results.equity.close, type:"scatter", mode:"lines", name:"Price", line:{ color:"var(--text-primary)", width:1.5 } },
+                ...(results.indicators.cdc_fast_ma ? [{ x: dates, y: results.indicators.cdc_fast_ma, type:"scatter", mode:"lines", name:`Fast EMA (${cdcFast})`, line:{ color:"#ff5757", width:1.5 } }] : []),
+                ...(results.indicators.cdc_slow_ma ? [{ x: dates, y: results.indicators.cdc_slow_ma, type:"scatter", mode:"lines", name:`Slow EMA (${cdcSlow})`, line:{ color:"#2563eb", width:1.5 } }] : []),
+                { x: cdcBuyDates,  y: cdcBuyPrices,  type:"scatter", mode:"markers", name:"CDC Buy",  marker:{ color:"#00c48c", size:11, symbol:"triangle-up",   line:{ color:"#fff", width:1 } } },
+                { x: cdcSellDates, y: cdcSellPrices, type:"scatter", mode:"markers", name:"CDC Sell", marker:{ color:"#ff5757", size:11, symbol:"triangle-down",  line:{ color:"#fff", width:1 } } },
+              ]} layout={{ showlegend:true, shapes }} style={{ height:420 }} />
+            </div>
+          );
+        })()}
+
+        {/* ── RSI Divergence / Convergence Chart ── */}
+        {results.indicators.rdiv_rsi && (() => {
+          const dates = results.equity.dates;
+          const rsiVals = results.indicators.rdiv_rsi;
+          const ind = results.indicators;
+
+          // Helper: get RSI value for a date
+          const rsiAtDate = d => { const i = dates.indexOf(d); return i >= 0 ? rsiVals[i] : null; };
+
+          const bullDates    = ind.rdiv_bull_dates       || [];
+          const bearDates    = ind.rdiv_bear_dates       || [];
+          const hBullDates   = ind.rdiv_hidden_bull_dates || [];
+          const hBearDates   = ind.rdiv_hidden_bear_dates || [];
+          const convBullDates= ind.rdiv_conv_bull_dates  || [];
+          const convBearDates= ind.rdiv_conv_bear_dates  || [];
+          const buyDates     = ind.rdiv_buy_dates        || [];
+          const sellDates    = ind.rdiv_sell_dates       || [];
+
+          // Shade background during active divergence periods
+          const bgShapes = [];
+          // Bullish div background
+          let inBull = false, bStart = null;
+          for (let i = 0; i < dates.length; i++) {
+            const isBull = ind.rdiv_bull?.[i];
+            if (isBull && !inBull) { inBull = true; bStart = dates[i]; }
+            if (!isBull && inBull) { bgShapes.push({ type:"rect", xref:"x", yref:"paper", x0:bStart, x1:dates[i], y0:0, y1:1, fillcolor:"rgba(0,196,140,0.07)", line:{width:0}, layer:"below" }); inBull = false; }
+          }
+          // Bearish div background
+          let inBear = false, beStart = null;
+          for (let i = 0; i < dates.length; i++) {
+            const isBear = ind.rdiv_bear?.[i];
+            if (isBear && !inBear) { inBear = true; beStart = dates[i]; }
+            if (!isBear && inBear) { bgShapes.push({ type:"rect", xref:"x", yref:"paper", x0:beStart, x1:dates[i], y0:0, y1:1, fillcolor:"rgba(255,87,87,0.07)", line:{width:0}, layer:"below" }); inBear = false; }
+          }
+
+          const rsiBullMarkers   = bullDates.map(rsiAtDate);
+          const rsiBearMarkers   = bearDates.map(rsiAtDate);
+          const rsiHBullMarkers  = hBullDates.map(rsiAtDate);
+          const rsiHBearMarkers  = hBearDates.map(rsiAtDate);
+          const rsiCBullMarkers  = convBullDates.map(rsiAtDate);
+          const rsiCBearMarkers  = convBearDates.map(rsiAtDate);
+          const rsiBuyMarkers    = buyDates.map(rsiAtDate);
+          const rsiSellMarkers   = sellDates.map(rsiAtDate);
+
+          return (
+            <div className="chart-container">
+              <div className="chart-title" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:6 }}>
+                <span>RSI Divergence / Convergence</span>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                  {[["📈 Bull Div","#00c48c"],["📉 Bear Div","#ff5757"],["🔵 Hidden Bull","#00b8d9"],["🟠 Hidden Bear","#f97316"],["💪 Bull Conv","#22d3ee"],["💀 Bear Conv","#a78bfa"],["🟢 Buy","#00ff99"],["🔴 Sell","#ff3366"]].map(([l,c]) => (
+                    <span key={l} style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:c+"22", color:c, fontWeight:700 }}>{l}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize:11, color:"var(--text-secondary)", padding:"4px 12px 0" }}>
+                Green bg = bullish divergence zone · Red bg = bearish divergence zone · Window: {divWindow} bars
+              </div>
+              <Chart data={[
+                { x: dates, y: rsiVals, type:"scatter", mode:"lines", name:"RSI", line:{ color:"#8b99b3", width:1.5 } },
+                bullDates.length   ? { x:bullDates,     y:rsiBullMarkers,  type:"scatter", mode:"markers", name:"Bull Div",    marker:{ color:"#00c48c", size:9,  symbol:"circle",        line:{color:"#fff",width:1} } } : null,
+                bearDates.length   ? { x:bearDates,     y:rsiBearMarkers,  type:"scatter", mode:"markers", name:"Bear Div",    marker:{ color:"#ff5757", size:9,  symbol:"circle",        line:{color:"#fff",width:1} } } : null,
+                hBullDates.length  ? { x:hBullDates,    y:rsiHBullMarkers, type:"scatter", mode:"markers", name:"Hidden Bull", marker:{ color:"#00b8d9", size:8,  symbol:"diamond",       line:{color:"#fff",width:1} } } : null,
+                hBearDates.length  ? { x:hBearDates,    y:rsiHBearMarkers, type:"scatter", mode:"markers", name:"Hidden Bear", marker:{ color:"#f97316", size:8,  symbol:"diamond",       line:{color:"#fff",width:1} } } : null,
+                convBullDates.length? { x:convBullDates,y:rsiCBullMarkers, type:"scatter", mode:"markers", name:"Bull Conv",   marker:{ color:"#22d3ee", size:7,  symbol:"square",        line:{color:"#fff",width:1} } } : null,
+                convBearDates.length? { x:convBearDates,y:rsiCBearMarkers, type:"scatter", mode:"markers", name:"Bear Conv",   marker:{ color:"#a78bfa", size:7,  symbol:"square",        line:{color:"#fff",width:1} } } : null,
+                buyDates.length    ? { x:buyDates,      y:rsiBuyMarkers,   type:"scatter", mode:"markers", name:"BUY Signal",  marker:{ color:"#00ff99", size:13, symbol:"triangle-up",   line:{color:"#fff",width:2} } } : null,
+                sellDates.length   ? { x:sellDates,     y:rsiSellMarkers,  type:"scatter", mode:"markers", name:"SELL Signal", marker:{ color:"#ff3366", size:13, symbol:"triangle-down", line:{color:"#fff",width:2} } } : null,
+              ].filter(Boolean)} layout={{ showlegend:true, yaxis:{ range:[0,100] }, shapes:[
+                ...bgShapes,
+                { type:"line", y0:rsiUpper, y1:rsiUpper, x0:0, x1:1, xref:"paper", line:{ color:"rgba(255,87,87,0.6)", width:1, dash:"dash" } },
+                { type:"line", y0:50,       y1:50,       x0:0, x1:1, xref:"paper", line:{ color:"rgba(139,153,179,0.4)", width:1, dash:"dot"  } },
+                { type:"line", y0:rsiLower, y1:rsiLower, x0:0, x1:1, xref:"paper", line:{ color:"rgba(0,196,140,0.6)", width:1, dash:"dash"  } },
+              ]}} style={{ height:280 }} />
+            </div>
+          );
+        })()}
+
+        {results.indicators.rsi && <div className="chart-container"><div className="chart-title">RSI</div>
+          <Chart data={[{ x: results.equity.dates, y: results.indicators.rsi, type: "scatter", mode: "lines", name: "RSI", line: { color: "#2563eb", width: 1.5 } }]}
+            layout={{ showlegend: false, yaxis: { range: [0, 100] }, shapes: [
+              { type: "line", y0: rsiUpper, y1: rsiUpper, x0: 0, x1: 1, xref: "paper", line: { color: "#ff5757", width: 1, dash: "dash" } },
+              { type: "line", y0: rsiLower, y1: rsiLower, x0: 0, x1: 1, xref: "paper", line: { color: "#00c48c", width: 1, dash: "dash" } }] }} style={{ height: 200 }} /></div>}
+        {results.indicators.macd && <div className="chart-container"><div className="chart-title">MACD</div>
+          <Chart data={[
+            { x: results.equity.dates, y: results.indicators.macd, type: "scatter", mode: "lines", name: "MACD", line: { color: "#2563eb", width: 1.5 } },
+            { x: results.equity.dates, y: results.indicators.macd_signal, type: "scatter", mode: "lines", name: "Signal", line: { color: "#ff5757", width: 1.5 } },
+            { x: results.equity.dates, y: results.indicators.macd_hist, type: "bar", name: "Histogram", marker: { color: results.indicators.macd_hist?.map(v => v >= 0 ? "rgba(0,196,140,0.5)" : "rgba(255,87,87,0.5)") } },
+          ]} layout={{ showlegend: true, barmode: "overlay" }} style={{ height: 250 }} /></div>}
+        <div className="chart-container"><div className="chart-title">Drawdown</div>
+          <Chart data={[{ x: results.drawdown.dates, y: results.drawdown.drawdown, type: "scatter", mode: "lines", fill: "tozeroy", name: "Drawdown", line: { color: "#ff5757", width: 1 }, fillcolor: "rgba(255,87,87,0.12)" }]}
+            layout={{ showlegend: false, yaxis: { title: "Drawdown (%)" } }} style={{ height: 200 }} /></div>
+        </>);
+      };
+
+      const renderTrades = () => (
+        <div className="chart-container" style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
+          <div className="chart-title">Trade Log ({results.trade_log.length} trades)</div>
+          {results.trade_log.length === 0 ? <div className="loader">No trades executed.</div> : (
+            <table className="trade-table"><thead><tr><th>#</th><th>Entry Date</th><th>Exit Date</th><th>Dir</th><th>Size</th><th>Entry $</th><th>Exit $</th><th>P&L</th><th>Return</th></tr></thead>
+              <tbody>{results.trade_log.map((t, i) => (<tr key={i}><td>{i+1}</td><td>{t.entry_date?.split("T")[0]||t.entry_date}</td><td>{t.exit_date?.split("T")[0]||t.exit_date}</td><td>{t.direction}</td><td>{t.size?.toFixed(4)}</td><td>${t.entry_price?.toFixed(2)}</td><td>${t.exit_price?.toFixed(2)}</td><td className={t.pnl >= 0 ? "positive" : "negative"}>${t.pnl?.toFixed(2)}</td><td className={t.return_pct >= 0 ? "positive" : "negative"}>{t.return_pct?.toFixed(2)}%</td></tr>))}</tbody></table>)}
+        </div>);
+
+      const renderMonthly = () => (<div className="chart-container"><div className="chart-title">Monthly Returns Heatmap</div><MonthlyHeatmap data={results.monthly_returns} /></div>);
+
+      const renderCorrelation = () => {
+        if (loadingCorr) return <div className="loader"><div className="spinner" /><span>Loading correlation data for {ticker}...</span></div>;
+        if (!corrResults) return (
+          <div className="empty-state">
+            <div className="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M8 11v2a5 5 0 0 0 5 5h.5"/><path d="M16 13V11a5 5 0 0 0-5-5h-.5"/></svg></div>
+            <h3>Correlation Analysis</h3>
+            <p>Click the Correlation tab to load asset correlation data. Uses the same ticker and date range set in the sidebar.</p>
+            <button className="btn btn-primary" style={{width:"auto",padding:"10px 24px",marginTop:12}} onClick={loadCorrelation}>Load Correlation Analysis</button>
+          </div>
+        );
+
+        const { ticker: t, assets, corr_matrix, rolling_corr, normalised, rolling_window, stats } = corrResults;
+
+        // ── Color helper for correlation value ──
+        const corrColor = (v, isDark) => {
+          if (v == null || isNaN(v)) return isDark ? '#1a2642' : '#e5e9f0';
+          const abs = Math.abs(v);
+          if (v > 0.7)  return isDark ? 'rgba(37,99,235,0.85)'  : 'rgba(37,99,235,0.75)';
+          if (v > 0.4)  return isDark ? 'rgba(37,99,235,0.5)'   : 'rgba(37,99,235,0.4)';
+          if (v > 0.1)  return isDark ? 'rgba(37,99,235,0.2)'   : 'rgba(37,99,235,0.15)';
+          if (v < -0.7) return isDark ? 'rgba(255,87,87,0.85)'  : 'rgba(229,62,62,0.75)';
+          if (v < -0.4) return isDark ? 'rgba(255,87,87,0.5)'   : 'rgba(229,62,62,0.4)';
+          if (v < -0.1) return isDark ? 'rgba(255,87,87,0.2)'   : 'rgba(229,62,62,0.15)';
+          return isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+        };
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // ── Plotly heatmap trace ──
+        const heatmapTrace = {
+          z: corr_matrix.values,
+          x: corr_matrix.labels,
+          y: corr_matrix.labels,
+          type: "heatmap",
+          colorscale: [
+            [0,   "#ff5757"], [0.3, "rgba(255,87,87,0.3)"],
+            [0.5, isDark ? "#1a2642" : "#f5f7fb"],
+            [0.7, "rgba(37,99,235,0.3)"], [1, "#2563eb"],
+          ],
+          zmin: -1, zmax: 1,
+          text: corr_matrix.values.map(row => row.map(v => v != null ? v.toFixed(2) : "")),
+          texttemplate: "%{text}",
+          textfont: { size: 11 },
+          hovertemplate: "%{y} × %{x}: %{z:.3f}<extra></extra>",
+          showscale: true,
+          colorbar: { title: "r", thickness: 14, len: 0.8 },
+        };
+
+        // ── Rolling corr lines ──
+        const ROLL_COLORS = ["#2563eb","#00c48c","#ff5757","#ffb800","#a78bfa","#00b8d9","#f97316","#10b981","#f43f5e","#8b5cf6"];
+        const rollingTraces = Object.entries(rolling_corr).map(([label, data], i) => ({
+          x: data.dates, y: data.values,
+          type: "scatter", mode: "lines", name: label,
+          line: { color: ROLL_COLORS[i % ROLL_COLORS.length], width: 1.5 },
+        }));
+
+        // ── Normalised price lines ──
+        const normTraces = Object.entries(normalised).map(([label, data], i) => ({
+          x: data.dates, y: data.values,
+          type: "scatter", mode: "lines", name: label,
+          line: { color: label === t ? "#2563eb" : ROLL_COLORS[(i + 1) % ROLL_COLORS.length], width: label === t ? 2.5 : 1.5 },
+        }));
+
+        // ── Correlation with user asset only (from matrix) ──
+        const userIdx = corr_matrix.labels.indexOf(t);
+        const corrWithUser = corr_matrix.labels.map((label, i) => ({
+          label, value: userIdx >= 0 ? corr_matrix.values[userIdx][i] : null,
+        })).filter(x => x.label !== t).sort((a, b) => (b.value || 0) - (a.value || 0));
+
+        return (<>
+          {/* Header refresh button */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+              Correlation analysis for <strong style={{color:"var(--text-primary)"}}>{t}</strong> vs {assets.length - 1} global benchmarks · {rolling_window}-day rolling window
+            </div>
+            <button className="btn btn-secondary" style={{ width: "auto", padding: "6px 14px", marginTop: 0, fontSize: 12 }}
+              onClick={loadCorrelation}>↻ Refresh</button>
+          </div>
+
+          {/* ── 1. Correlation Coefficient Cards ── */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title">Correlation with {t}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
+              {corrWithUser.map(({ label, value }) => {
+                const abs = Math.abs(value || 0);
+                const positive = value >= 0;
+                const strength = abs > 0.7 ? "Strong" : abs > 0.4 ? "Moderate" : abs > 0.1 ? "Weak" : "Near zero";
+                const col = abs > 0.4 ? (positive ? "var(--accent)" : "var(--red)") : "var(--text-secondary)";
+                return (
+                  <div key={label} className="metric-card" style={{ borderLeft: `3px solid ${col}` }}>
+                    <div className="label" style={{ color: col }}>{label}</div>
+                    <div className="value" style={{ fontSize: 20, color: col }}>{value != null ? value.toFixed(3) : "—"}</div>
+                    <div className="sub">{strength} {positive ? "positive" : "negative"}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── 2. Normalised Price Comparison ── */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title">Normalised Price Performance (Rebased to 100)</div>
+            <Chart data={normTraces} layout={{ showlegend: true, yaxis: { title: "Indexed Value (100 = start)" } }} style={{ height: 400 }} />
+          </div>
+
+          {/* ── 3. Correlation Heatmap ── */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title">Correlation Matrix (Daily Returns)</div>
+            <Chart data={[heatmapTrace]}
+              layout={{ showlegend: false, margin: { l: 110, r: 60, t: 20, b: 110 },
+                xaxis: { tickangle: -35 }, yaxis: { tickangle: 0 } }}
+              style={{ height: Math.max(340, assets.length * 36 + 80) }} />
+          </div>
+
+          {/* ── 4. Rolling Correlation ── */}
+          <div className="chart-container" style={{ marginBottom: 16 }}>
+            <div className="chart-title">Rolling {rolling_window}-Day Correlation vs {t}</div>
+            <Chart data={[
+              ...rollingTraces,
+              { x: rollingTraces[0]?.x || [], y: rollingTraces[0]?.x?.map(() => 0) || [],
+                type: "scatter", mode: "lines", name: "Zero", line: { color: "var(--text-muted)", width: 1, dash: "dash" }, showlegend: false },
+            ]} layout={{ showlegend: true, yaxis: { title: "Correlation (r)", range: [-1, 1],
+              zeroline: true, zerolinecolor: "var(--border-main)", zerolinewidth: 1 } }} style={{ height: 350 }} />
+          </div>
+
+          {/* ── 5. Per-asset Stats Table ── */}
+          <div className="chart-container">
+            <div className="chart-title">Asset Statistics (Annualised)</div>
+            <div style={{ overflowX: "auto" }}>
+              <table className="trade-table">
+                <thead><tr><th>Asset</th><th>Ann. Return</th><th>Ann. Volatility</th><th>Sharpe</th><th>Corr with {t}</th></tr></thead>
+                <tbody>
+                  {assets.map(label => {
+                    const s = stats[label] || {};
+                    const corrVal = userIdx >= 0 ? corr_matrix.values[userIdx][corr_matrix.labels.indexOf(label)] : null;
+                    const isUser = label === t;
+                    return (
+                      <tr key={label} style={isUser ? { background: "var(--accent-bg)", fontWeight: 600 } : {}}>
+                        <td>{label}{isUser ? " ★" : ""}</td>
+                        <td className={s.ann_return >= 0 ? "positive" : "negative"}>{s.ann_return != null ? `${s.ann_return}%` : "—"}</td>
+                        <td>{s.ann_vol != null ? `${s.ann_vol}%` : "—"}</td>
+                        <td className={s.sharpe >= 0 ? "positive" : "negative"}>{s.sharpe != null ? s.sharpe.toFixed(2) : "—"}</td>
+                        <td style={{ color: corrVal >= 0 ? "var(--accent)" : "var(--red)", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>
+                          {isUser ? "—" : corrVal != null ? corrVal.toFixed(3) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>);
+      };
+
+      const renderOptimize = () => {
+        if (!optResults) return <div className="loader">Run optimization from the sidebar to see results here.</div>;
+        return (<>
+          {optResults.results.length > 0 && <div className="chart-container"><div className="chart-title">Return vs Sharpe Ratio</div>
+            <Chart data={[{ x: optResults.results.map(r => r.total_return_pct), y: optResults.results.map(r => r.sharpe_ratio),
+              text: optResults.results.map(r => optResults.param_keys.map(k => `${k}: ${r[k]}`).join(", ")),
+              type: "scatter", mode: "markers", marker: { color: optResults.results.map(r => r.sharpe_ratio || 0), colorscale: "Viridis", size: 8, showscale: true, colorbar: { title: "Sharpe" } },
+              hovertemplate: "%{text}<br>Return: %{x:.2f}%<br>Sharpe: %{y:.2f}<extra></extra>" }]}
+              layout={{ xaxis: { title: "Total Return (%)" }, yaxis: { title: "Sharpe Ratio" } }} /></div>}
+          <div className="chart-container">
+            <div className="chart-title">Optimization Results — {optResults.total_combinations} combinations tested</div>
+            <div style={{ maxHeight: 500, overflowY: "auto" }}>
+              <table className="opt-table"><thead><tr><th>#</th>{optResults.param_keys.map(k => <th key={k}>{k}</th>)}<th>Return %</th><th>Sharpe</th><th>Max DD %</th><th>Trades</th><th>Win Rate</th></tr></thead>
+                <tbody>{optResults.results.slice(0, 100).map((r, i) => (<tr key={i}><td>{i+1}</td>{optResults.param_keys.map(k => <td key={k}>{r[k]}</td>)}
+                  <td className={r.total_return_pct >= 0 ? "positive" : "negative"}>{r.total_return_pct?.toFixed(2)}%</td>
+                  <td className={r.sharpe_ratio >= 0 ? "positive" : "negative"}>{r.sharpe_ratio?.toFixed(2) ?? "—"}</td>
+                  <td className="negative">{r.max_drawdown_pct != null ? `-${Math.abs(r.max_drawdown_pct).toFixed(2)}%` : "—"}</td>
+                  <td>{r.total_trades ?? "—"}</td><td>{r.win_rate != null ? `${r.win_rate}%` : "—"}</td></tr>))}</tbody></table>
+            </div></div>
+        </>);
+      };
+
+      return (<>
+        <div className="header">
+          <div className="header-left">
+            <div className="logo">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 4L10 12L4 20H8L14 12L8 4H4Z" fill="var(--accent)"/><path d="M12 4L18 12L12 20H16L22 12L16 4H12Z" fill="var(--accent)" opacity="0.5"/></svg>
+              <span className="logo-text"><span className="accent">efin.finance</span> Backtesting (Prototype)</span>
+            </div>
+          </div>
+          <div className="header-right">
+            <div className="header-info"><span className="live-dot"></span>{ticker} · {interval} · {entryConds.length}E/{exitConds.length}X</div>
+            <button className="theme-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>{theme === 'dark' ? <SunIcon /> : <MoonIcon />}</button>
+          </div>
+        </div>
+        <div className="layout">{renderSidebar()}<div className="main">{renderMain()}</div></div>
+      </>);
+    }
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>
