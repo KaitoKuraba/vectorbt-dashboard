@@ -3,7 +3,7 @@ module.exports = async function handler(req, res) {
   if (!backendUrl) {
     return res.status(500).json({ error: "BACKEND_URL not set" });
   }
-  const pathParts = req.query['...path'] || [];
+  const pathParts = [].concat(req.query['...path'] || []);
   const targetPath = "/api/" + pathParts.join("/");
   const queryParams = Object.entries(req.query)
     .filter(([k]) => k !== '...path')
