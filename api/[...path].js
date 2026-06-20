@@ -3,10 +3,10 @@ module.exports = async function handler(req, res) {
   if (!backendUrl) {
     return res.status(500).json({ error: "BACKEND_URL not set" });
   }
-  const pathParts = req.query.path || [];
+  const pathParts = req.query['...path'] || [];
   const targetPath = "/api/" + pathParts.join("/");
   const queryParams = Object.entries(req.query)
-    .filter(([k]) => k !== "path")
+    .filter(([k]) => k !== '...path')
     .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
     .join("&");
   const targetUrl = backendUrl + targetPath + (queryParams ? "?" + queryParams : "");
@@ -22,14 +22,9 @@ module.exports = async function handler(req, res) {
       res.setHeader("Content-Type", "application/json");
       res.status(response.status).json(data);
     } catch (parseErr) {
-      res.status(502).json({
-        error: "Non-JSON from backend",
-        targetUrl: targetUrl,
-        httpStatus: response.status,
-        raw: text.slice(0, 400)
-      });
+      res.status(502).json({ error: "Non-JSON from backend", targetUrl, httpStatus: response.status, raw: text.slice(0, 300) });
     }
   } catch (err) {
-    res.status(502).json({ error: "Fetch failed: " + err.message, targetUrl: targetUrl });
+    res.status(502).json({ error: "Fetch failed: " + err.message, targetUrl });
   }
 };
